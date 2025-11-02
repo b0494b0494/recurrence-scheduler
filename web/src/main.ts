@@ -1,22 +1,31 @@
 import Alpine from 'alpinejs';
 import { api } from './services/api';
-import { formatDateTime, formatRRule, setDefaultDates } from './utils/format';
+import { useEvents } from './hooks/useEvents';
+import { calendarCardComponent } from './components/CalendarCard';
+import { eventCardComponent } from './components/EventCard';
+import { setDefaultDates } from './utils/format';
 import type { Calendar, CreateCalendarRequest, CreateEventRequest, Event, RecurrenceRule } from './types/api';
 
 // Alpine.js component
 window.schedulerApp = function schedulerApp() {
   return {
     activeTab: 'calendars' as 'calendars' | 'events' | 'create',
+    
+    // Calendar state (from hook)
     calendars: [] as Calendar[],
-    events: [] as Event[],
+    loading: false,
+    error: null as string | null,
     selectedCalendarId: '',
     selectedCalendar: null as Calendar | null,
     showCalendarDetailView: false,
-    calendarEvents: [] as Event[],
+    
+    // Event state (from hooks)
+    events: useEvents(),
+    calendarEvents: useEvents(),
+    
     startDate: '',
     endDate: '',
-    eventsHtml: '<div class="text-center text-gray-500 py-12">カレンダーを選択して読み込みボタンをクリック</div>',
-    calendarEventsHtml: '<div class="text-center text-gray-500 py-12">読み込み中...</div>',
+    
     message: { text: '', type: 'info' as 'info' | 'success' | 'error' },
     
     newCalendar: {
@@ -46,6 +55,21 @@ window.schedulerApp = function schedulerApp() {
       this.endDate = dates.end;
     },
 
+    async loadCalendars() {
+      this.loading = true;
+      this.error = null;
+      try {
+        const data = await api.listCalendars();
+        this.calendars = data.calendars || [];
+      } catch (err) {
+        this.error = err instanceof Error ? err.message : 'Unknown error';
+        this.calendars = [];
+        this.showMessage('カレンダーの読み込みに失敗しました', 'error');
+      } finally {
+        this.loading = false;
+      }
+    },
+
     showMessage(text: string, type: 'success' | 'error' = 'success') {
       this.message = { text, type };
       setTimeout(() => {
@@ -53,14 +77,13 @@ window.schedulerApp = function schedulerApp() {
       }, 3000);
     },
 
-    async loadCalendars() {
-      try {
-        const data = await api.listCalendars();
-        this.calendars = data.calendars || [];
-      } catch (error) {
-        this.showMessage('カレンダーの読み込みに失敗しました', 'error');
-        this.calendars = [];
-      }
+    // Component factories
+    calendarCard(calendar: Calendar) {
+      return calendarCardComponent(calendar, (cal) => this.showCalendarDetail(cal));
+    },
+
+    eventCard(event: Event) {
+      return eventCardComponent(event);
     },
 
     async showCalendarDetail(calendar: Calendar) {
@@ -72,50 +95,15 @@ window.schedulerApp = function schedulerApp() {
     closeCalendarDetail() {
       this.showCalendarDetailView = false;
       this.selectedCalendar = null;
-      this.calendarEvents = [];
+      this.calendarEvents.events = [];
     },
 
     async loadCalendarEvents(calendarId: string) {
-      this.calendarEventsHtml = '<div class="text-center text-gray-500 py-12">読み込み中...</div>';
-      
-      try {
-        const dates = setDefaultDates();
-        const start = new Date(dates.start).toISOString();
-        const end = new Date(dates.end + 'T23:59:59').toISOString();
-        
-        const data = await api.listEvents(calendarId, start, end);
-        this.calendarEvents = data.events || [];
-        
-        if (this.calendarEvents.length === 0) {
-          this.calendarEventsHtml = `
-            <div class="col-span-full text-center py-12">
-              <div class="inline-block p-6 bg-gray-50 rounded-xl">
-                <p class="text-gray-600">このカレンダーにはイベントが登録されていません</p>
-              </div>
-            </div>
-          `;
-          return;
-        }
-        
-        this.calendarEventsHtml = this.calendarEvents.map(event => `
-          <div class="bg-gradient-to-br from-blue-50 to-cyan-50 border-2 border-blue-200 rounded-xl p-6 hover:shadow-lg transition-all duration-300">
-            <h4 class="text-xl font-bold text-blue-700 mb-2">${this.escapeHtml(event.title)}</h4>
-            <p class="text-gray-600 mb-4">${this.escapeHtml(event.description || '説明なし')}</p>
-            <div class="text-sm text-gray-700 space-y-2">
-              <p><span class="font-semibold">📅 開始:</span> ${formatDateTime(event.dtstart)}</p>
-              <p><span class="font-semibold">⏰ 終了:</span> ${formatDateTime(event.dtend)}</p>
-              ${event.rrule ? `<p><span class="font-semibold">🔄 繰り返し:</span> ${formatRRule(event.rrule)}</p>` : ''}
-            </div>
-          </div>
-        `).join('');
-      } catch (error) {
-        this.calendarEventsHtml = `
-          <div class="col-span-full text-center py-12">
-            <div class="inline-block p-6 bg-red-50 border-2 border-red-200 rounded-xl">
-              <p class="text-red-600 font-semibold">エラー: ${error instanceof Error ? error.message : 'Unknown error'}</p>
-            </div>
-          </div>
-        `;
+      const dates = setDefaultDates();
+      const start = new Date(dates.start).toISOString();
+      const end = new Date(dates.end + 'T23:59:59').toISOString();
+      await this.calendarEvents.load(calendarId, start, end);
+      if (this.calendarEvents.error) {
         this.showMessage('イベントの読み込みに失敗しました', 'error');
       }
     },
@@ -126,50 +114,17 @@ window.schedulerApp = function schedulerApp() {
         return;
       }
       
-      this.eventsHtml = '<div class="text-center text-gray-500 py-12">読み込み中...</div>';
-      
-      try {
-        const start = new Date(this.startDate).toISOString();
-        const end = new Date(this.endDate + 'T23:59:59').toISOString();
-        
-        const data = await api.listEvents(this.selectedCalendarId, start, end);
-        this.events = data.events || [];
-        
-        if (this.events.length === 0) {
-          this.eventsHtml = `
-            <div class="col-span-full text-center py-12">
-              <div class="inline-block p-6 bg-gray-50 rounded-xl">
-                <p class="text-gray-600">イベントがありません</p>
-              </div>
-            </div>
-          `;
-          return;
-        }
-        
-        this.eventsHtml = this.events.map(event => `
-          <div class="bg-gradient-to-br from-blue-50 to-cyan-50 border-2 border-blue-200 rounded-xl p-6 hover:shadow-lg transition-all duration-300">
-            <h4 class="text-xl font-bold text-blue-700 mb-2">${this.escapeHtml(event.title)}</h4>
-            <p class="text-gray-600 mb-4">${this.escapeHtml(event.description || '説明なし')}</p>
-            <div class="text-sm text-gray-700 space-y-2">
-              <p><span class="font-semibold">📅 開始:</span> ${formatDateTime(event.dtstart)}</p>
-              <p><span class="font-semibold">⏰ 終了:</span> ${formatDateTime(event.dtend)}</p>
-              ${event.rrule ? `<p><span class="font-semibold">🔄 繰り返し:</span> ${formatRRule(event.rrule)}</p>` : ''}
-            </div>
-          </div>
-        `).join('');
-      } catch (error) {
-        this.eventsHtml = `
-          <div class="col-span-full text-center py-12">
-            <div class="inline-block p-6 bg-red-50 border-2 border-red-200 rounded-xl">
-              <p class="text-red-600 font-semibold">エラー: ${error instanceof Error ? error.message : 'Unknown error'}</p>
-            </div>
-          </div>
-        `;
+      const start = new Date(this.startDate).toISOString();
+      const end = new Date(this.endDate + 'T23:59:59').toISOString();
+      await this.events.load(this.selectedCalendarId, start, end);
+      if (this.events.error) {
         this.showMessage('イベントの読み込みに失敗しました', 'error');
       }
     },
 
     async createCalendar() {
+      this.loading = true;
+      this.error = null;
       try {
         await api.createCalendar({
           name: this.newCalendar.name,
@@ -181,10 +136,13 @@ window.schedulerApp = function schedulerApp() {
         this.newCalendar = { name: '', description: '', timezone: 'UTC' };
         await this.loadCalendars();
       } catch (error) {
+        this.error = error instanceof Error ? error.message : 'Unknown error';
         this.showMessage(
-          'カレンダーの作成に失敗しました: ' + (error instanceof Error ? error.message : 'Unknown error'),
+          'カレンダーの作成に失敗しました: ' + this.error,
           'error'
         );
+      } finally {
+        this.loading = false;
       }
     },
 
@@ -205,7 +163,7 @@ window.schedulerApp = function schedulerApp() {
           }
         }
         
-        await api.createEvent({
+        await this.events.create({
           calendar_id: this.newEvent.calendar_id,
           title: this.newEvent.title,
           description: this.newEvent.description,

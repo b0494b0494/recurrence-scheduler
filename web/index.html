@@ -59,23 +59,27 @@
                     <p class="text-sm text-gray-500 mt-2">「作成」タブからカレンダーを作成してください</p>
                 </div>
             </div>
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div x-show="loading" class="text-center py-12 text-gray-500">読み込み中...</div>
+            <div x-show="error" class="text-center py-12">
+                <div class="inline-block p-6 bg-red-50 border-2 border-red-200 rounded-xl">
+                    <p class="text-red-600 font-semibold" x-text="'エラー: ' + error"></p>
+                </div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" x-show="!loading && !error">
                 <template x-for="cal in calendars" :key="cal.id">
-                    <div 
-                        class="bg-gradient-to-br from-purple-50 to-pink-50 border-2 border-purple-200 rounded-xl p-6 hover:shadow-lg transition-all duration-300 hover:scale-105 cursor-pointer group"
-                    >
+                    <div x-data="calendarCard(cal)" class="bg-gradient-to-br from-purple-50 to-pink-50 border-2 border-purple-200 rounded-xl p-6 hover:shadow-lg transition-all duration-300 hover:scale-105 cursor-pointer group">
                         <div class="flex items-start justify-between mb-2">
-                            <h4 class="text-xl font-bold text-purple-700 group-hover:text-purple-800" x-text="cal.name"></h4>
+                            <h4 class="text-xl font-bold text-purple-700 group-hover:text-purple-800" x-text="calendar.name"></h4>
                             <span class="text-purple-500 opacity-0 group-hover:opacity-100 transition-opacity">👁️</span>
                         </div>
-                        <p class="text-gray-600 mb-3" x-text="cal.description || '説明なし'"></p>
+                        <p class="text-gray-600 mb-3" x-text="calendar.description || '説明なし'"></p>
                         <div class="text-sm text-gray-500 space-y-1">
-                            <p><span class="font-semibold">ID:</span> <code class="bg-gray-100 px-2 py-1 rounded text-xs" x-text="cal.id.substring(0, 8) + '...'"></code></p>
-                            <p><span class="font-semibold">タイムゾーン:</span> <span x-text="cal.timezone"></span></p>
+                            <p><span class="font-semibold">ID:</span> <code class="bg-gray-100 px-2 py-1 rounded text-xs" x-text="shortId"></code></p>
+                            <p><span class="font-semibold">タイムゾーン:</span> <span x-text="calendar.timezone"></span></p>
                         </div>
                         <div class="mt-4 pt-3 border-t border-purple-200">
                             <button 
-                                @click="showCalendarDetail(cal)"
+                                @click="handleDetailClick()"
                                 class="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white px-4 py-2 rounded-lg hover:from-purple-700 hover:to-pink-700 transition-all text-sm font-semibold"
                             >
                                 📋 詳細を見る
@@ -121,14 +125,37 @@
                     </div>
                     <div>
                         <span class="font-semibold text-gray-700">📅 登録イベント数:</span>
-                        <span class="block mt-1 text-lg font-bold text-purple-600" x-text="calendarEvents.length + '件'"></span>
+                        <span class="block mt-1 text-lg font-bold text-purple-600" x-text="calendarEvents.events.length + '件'"></span>
                     </div>
                 </div>
             </div>
 
             <div class="mb-4">
                 <h3 class="text-xl font-bold text-gray-800 mb-4">登録されているイベント</h3>
-                <div x-html="calendarEventsHtml" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+                <div x-show="calendarEvents.loading" class="text-center py-12 text-gray-500">読み込み中...</div>
+                <div x-show="calendarEvents.error" class="text-center py-12">
+                    <div class="inline-block p-6 bg-red-50 border-2 border-red-200 rounded-xl">
+                        <p class="text-red-600 font-semibold" x-text="'エラー: ' + calendarEvents.error"></p>
+                    </div>
+                </div>
+                <div x-show="!calendarEvents.loading && !calendarEvents.error && calendarEvents.events.length === 0" class="text-center py-12">
+                    <div class="inline-block p-6 bg-gray-50 rounded-xl">
+                        <p class="text-gray-600">このカレンダーにはイベントが登録されていません</p>
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4" x-show="!calendarEvents.loading && !calendarEvents.error && calendarEvents.events.length > 0">
+                    <template x-for="event in calendarEvents.events" :key="event.id">
+                        <div x-data="eventCard(event)" class="bg-gradient-to-br from-blue-50 to-cyan-50 border-2 border-blue-200 rounded-xl p-6 hover:shadow-lg transition-all duration-300">
+                            <h4 class="text-xl font-bold text-blue-700 mb-2" x-text="event.title"></h4>
+                            <p class="text-gray-600 mb-4" x-text="event.description || '説明なし'"></p>
+                            <div class="text-sm text-gray-700 space-y-2">
+                                <p><span class="font-semibold">📅 開始:</span> <span x-text="formattedStart"></span></p>
+                                <p><span class="font-semibold">⏰ 終了:</span> <span x-text="formattedEnd"></span></p>
+                                <p x-show="hasRecurrence"><span class="font-semibold">🔄 繰り返し:</span> <span x-text="recurrenceText"></span></p>
+                            </div>
+                        </div>
+                    </template>
+                </div>
             </div>
         </div>
 
@@ -162,7 +189,30 @@
                     📥 読み込み
                 </button>
             </div>
-            <div x-html="eventsHtml" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+            <div x-show="events.loading" class="text-center py-12 text-gray-500">読み込み中...</div>
+            <div x-show="events.error" class="text-center py-12">
+                <div class="inline-block p-6 bg-red-50 border-2 border-red-200 rounded-xl">
+                    <p class="text-red-600 font-semibold" x-text="'エラー: ' + events.error"></p>
+                </div>
+            </div>
+            <div x-show="!events.loading && !events.error && events.events.length === 0" class="text-center py-12">
+                <div class="inline-block p-6 bg-gray-50 rounded-xl">
+                    <p class="text-gray-600">イベントがありません</p>
+                </div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4" x-show="!events.loading && !events.error && events.events.length > 0">
+                <template x-for="event in events.events" :key="event.id">
+                    <div x-data="eventCard(event)" class="bg-gradient-to-br from-blue-50 to-cyan-50 border-2 border-blue-200 rounded-xl p-6 hover:shadow-lg transition-all duration-300">
+                        <h4 class="text-xl font-bold text-blue-700 mb-2" x-text="event.title"></h4>
+                        <p class="text-gray-600 mb-4" x-text="event.description || '説明なし'"></p>
+                        <div class="text-sm text-gray-700 space-y-2">
+                            <p><span class="font-semibold">📅 開始:</span> <span x-text="formattedStart"></span></p>
+                            <p><span class="font-semibold">⏰ 終了:</span> <span x-text="formattedEnd"></span></p>
+                            <p x-show="hasRecurrence"><span class="font-semibold">🔄 繰り返し:</span> <span x-text="recurrenceText"></span></p>
+                        </div>
+                    </div>
+                </template>
+            </div>
         </div>
 
         <!-- Create Tab -->
