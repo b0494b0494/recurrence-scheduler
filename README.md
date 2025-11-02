@@ -60,4 +60,4 @@ npm run dev  # http://localhost:5173
 
 ## License
 
-All packages use MIT or Apache 2.0 licenses.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
