@@ -12,17 +12,28 @@ A RFC 5545 (iCalendar) compliant recurrence scheduler application. Lightweight a
 
 ## Tech Stack
 
-- **Language**: Go 1.21+
+### Backend
+- **Language**: Go 1.23+
 - **Database**: SQLite (modernc.org/sqlite)
 - **gRPC**: google.golang.org/grpc
+- **gRPC-Gateway**: HTTP REST API gateway
 - **RRULE**: github.com/teambition/rrule-go (MIT License)
+
+### Frontend
+- **Language**: TypeScript
+- **Build Tool**: Vite (MIT License)
+- **UI Framework**: Alpine.js (MIT License)
+- **Styling**: Tailwind CSS (MIT License)
+
+### Infrastructure
 - **Container**: Docker & Docker Compose
 
 ## Setup
 
 ### Prerequisites
 
-- Go 1.21 or later
+- Go 1.23 or later
+- Node.js 20+ (for frontend development)
 - Docker & Docker Compose
 - Protocol Buffers compiler (`protoc`)
 - protoc-gen-go and protoc-gen-go-grpc plugins
@@ -40,7 +51,9 @@ go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
 
 ### Local Development
 
-1. **Install dependencies**
+#### Backend
+
+1. **Install Go dependencies**
 
 ```bash
 go mod download
@@ -73,6 +86,30 @@ make build
 make run
 # or
 ./bin/scheduler
+```
+
+#### Frontend
+
+1. **Install dependencies**
+
+```bash
+cd web
+npm install
+```
+
+2. **Development server**
+
+```bash
+npm run dev
+# Frontend will be available at http://localhost:5173
+# API calls will be proxied to http://localhost:8080
+```
+
+3. **Build for production**
+
+```bash
+npm run build
+# Built files will be in web/dist/
 ```
 
 ### Running with Docker

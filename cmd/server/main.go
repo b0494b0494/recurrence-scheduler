@@ -84,16 +84,18 @@ func main() {
 		mux.ServeHTTP(w, r)
 	})
 
-	// 静的ファイル
-	staticFS := http.FileServer(http.Dir("./web/static"))
-	http.Handle("/static/", http.StripPrefix("/static/", staticFS))
+	// 静的ファイル（Viteビルド後のdistディレクトリ）
+	fs := http.FileServer(http.Dir("./web"))
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasPrefix(r.URL.Path, "/api/") {
+			handler.ServeHTTP(w, r)
+			return
+		}
+		// Viteビルド後のファイルを配信
 		if r.URL.Path == "/" || r.URL.Path == "/index.html" {
 			http.ServeFile(w, r, "./web/index.html")
-		} else if strings.HasPrefix(r.URL.Path, "/api/") {
-			handler.ServeHTTP(w, r)
-		} else if strings.HasPrefix(r.URL.Path, "/static/") {
-			staticFS.ServeHTTP(w, r)
+		} else {
+			fs.ServeHTTP(w, r)
 		}
 	})
 

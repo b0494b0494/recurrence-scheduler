@@ -40,6 +40,19 @@ RUN go mod tidy
 # バイナリをビルド
 RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o scheduler ./cmd/server
 
+# フロントエンドビルドステージ
+FROM node:20-alpine AS frontend-builder
+
+WORKDIR /app/web
+
+# フロントエンドの依存関係をコピーしてインストール
+COPY web/package.json ./
+RUN npm install
+
+# フロントエンドソースをコピーしてビルド
+COPY web/ ./
+RUN npm run build
+
 # 軽量なランタイムイメージ
 FROM alpine:latest
 
@@ -47,9 +60,9 @@ RUN apk --no-cache add ca-certificates tzdata
 
 WORKDIR /root/
 
-# ビルドしたバイナリとwebディレクトリをコピー
+# ビルドしたバイナリとビルド済みwebディレクトリをコピー
 COPY --from=builder /app/scheduler .
-COPY --from=builder /app/web ./web
+COPY --from=frontend-builder /app/web/dist ./web
 
 EXPOSE 50051 8080
 
