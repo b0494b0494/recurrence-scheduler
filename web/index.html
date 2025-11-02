@@ -235,13 +235,14 @@
                         placeholder="説明"
                         class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                     ></textarea>
-                    <input 
-                        type="text" 
+                    <select 
                         x-model="newCalendar.timezone"
-                        placeholder="タイムゾーン (例: Asia/Tokyo)" 
-                        value="UTC"
                         class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                     >
+                        <template x-for="tz in timezones" :key="tz.value">
+                            <option :value="tz.value" x-text="tz.label"></option>
+                        </template>
+                    </select>
                     <button 
                         type="submit"
                         class="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white px-6 py-3 rounded-lg hover:from-purple-700 hover:to-pink-700 transition-all shadow-lg hover:shadow-xl font-semibold"
@@ -291,6 +292,15 @@
                             class="px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                         >
                     </div>
+                    
+                    <select 
+                        x-model="newEvent.timezone"
+                        class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    >
+                        <template x-for="tz in timezones" :key="tz.value">
+                            <option :value="tz.value" x-text="tz.label"></option>
+                        </template>
+                    </select>
                     
                     <!-- Recurrence Rule -->
                     <div class="p-4 bg-white rounded-lg border border-gray-200">

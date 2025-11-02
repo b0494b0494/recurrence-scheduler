@@ -4,6 +4,7 @@ import { useEvents } from './hooks/useEvents';
 import { calendarCardComponent } from './components/CalendarCard';
 import { eventCardComponent } from './components/EventCard';
 import { setDefaultDates } from './utils/format';
+import { TIMEZONES } from './utils/timezones';
 import type { Calendar, CreateCalendarRequest, CreateEventRequest, Event, RecurrenceRule } from './types/api';
 
 // Alpine.js component
@@ -25,6 +26,10 @@ window.schedulerApp = function schedulerApp() {
     
     startDate: '',
     endDate: '',
+    
+      get timezones() {
+        return TIMEZONES;
+      },
     
     message: { text: '', type: 'info' as 'info' | 'success' | 'error' },
     
