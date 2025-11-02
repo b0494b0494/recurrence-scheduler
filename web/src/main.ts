@@ -3,6 +3,7 @@ import { api } from './services/api';
 import { useEvents } from './hooks/useEvents';
 import { calendarCardComponent } from './components/CalendarCard';
 import { eventCardComponent } from './components/EventCard';
+import { calendarViewComponent } from './components/CalendarView';
 import { setDefaultDates } from './utils/format';
 import { TIMEZONES } from './utils/timezones';
 import type { Calendar, CreateCalendarRequest, CreateEventRequest, Event, RecurrenceRule } from './types/api';
@@ -10,7 +11,7 @@ import type { Calendar, CreateCalendarRequest, CreateEventRequest, Event, Recurr
 // Alpine.js component
 window.schedulerApp = function schedulerApp() {
   return {
-    activeTab: 'calendars' as 'calendars' | 'events' | 'create',
+    activeTab: 'calendars' as 'calendars' | 'events' | 'create' | 'calendar-view',
     
     // Calendar state (from hook)
     calendars: [] as Calendar[],
@@ -27,8 +28,18 @@ window.schedulerApp = function schedulerApp() {
     startDate: '',
     endDate: '',
     
+    // Calendar view state
+    calendarViewYear: new Date().getFullYear(),
+    calendarViewMonth: new Date().getMonth(),
+    calendarViewEvents: [] as Event[],
+    calendarViewCalendarId: '',
+    
       get timezones() {
         return TIMEZONES;
+      },
+      
+      get calendarView() {
+        return calendarViewComponent(this.calendarViewEvents, this.calendarViewYear, this.calendarViewMonth);
       },
     
     message: { text: '', type: 'info' as 'info' | 'success' | 'error' },
@@ -89,6 +100,40 @@ window.schedulerApp = function schedulerApp() {
 
     eventCard(event: Event) {
       return eventCardComponent(event);
+    },
+    
+    async loadCalendarViewEvents() {
+      if (!this.calendarViewCalendarId) {
+        this.calendarViewEvents = [];
+        return;
+      }
+      
+      const firstDay = new Date(this.calendarViewYear, this.calendarViewMonth, 1);
+      const lastDay = new Date(this.calendarViewYear, this.calendarViewMonth + 1, 0);
+      
+      const start = new Date(firstDay.getFullYear(), firstDay.getMonth(), 1).toISOString();
+      const end = new Date(lastDay.getFullYear(), lastDay.getMonth(), lastDay.getDate(), 23, 59, 59).toISOString();
+      
+      try {
+        const data = await api.listEvents(this.calendarViewCalendarId, start, end);
+        this.calendarViewEvents = data.events || [];
+      } catch (error) {
+        this.calendarViewEvents = [];
+        this.showMessage('カレンダービューの読み込みに失敗しました', 'error');
+      }
+    },
+    
+    changeCalendarViewMonth(direction: number) {
+      if (direction > 0) {
+        const next = this.calendarView.nextMonth();
+        this.calendarViewYear = next.year;
+        this.calendarViewMonth = next.month;
+      } else {
+        const prev = this.calendarView.prevMonth();
+        this.calendarViewYear = prev.year;
+        this.calendarViewMonth = prev.month;
+      }
+      this.loadCalendarViewEvents();
     },
 
     async showCalendarDetail(calendar: Calendar) {
@@ -230,7 +275,7 @@ Alpine.start();
 declare global {
   interface Window {
     schedulerApp: () => {
-      activeTab: 'calendars' | 'events' | 'create';
+      activeTab: 'calendars' | 'events' | 'create' | 'calendar-view';
       calendars: Calendar[];
       loading: boolean;
       error: string | null;
@@ -241,6 +286,12 @@ declare global {
       calendarEvents: ReturnType<typeof useEvents>;
       startDate: string;
       endDate: string;
+      calendarViewYear: number;
+      calendarViewMonth: number;
+      calendarViewEvents: Event[];
+      calendarViewCalendarId: string;
+      timezones: ReturnType<() => typeof TIMEZONES>;
+      calendarView: ReturnType<typeof calendarViewComponent>;
       message: { text: string; type: 'info' | 'success' | 'error' };
       newCalendar: CreateCalendarRequest;
       newEvent: CreateEventRequest & { rrule: { freq: string; interval: number; byday: string[] } };
@@ -249,6 +300,8 @@ declare global {
       loadCalendars(): Promise<void>;
       calendarCard(calendar: Calendar): ReturnType<typeof calendarCardComponent>;
       eventCard(event: Event): ReturnType<typeof eventCardComponent>;
+      loadCalendarViewEvents(): Promise<void>;
+      changeCalendarViewMonth(direction: number): void;
       showCalendarDetail(calendar: Calendar): Promise<void>;
       closeCalendarDetail(): void;
       loadCalendarEvents(calendarId: string): Promise<void>;
