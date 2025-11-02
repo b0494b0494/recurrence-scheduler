@@ -54,6 +54,10 @@ npm run dev  # http://localhost:5173
 - `GET /api/v1/events` - List events
 - `GET /api/v1/events/{id}` - Get event
 
+## Documentation
+
+- [Architecture Documentation](./docs/ARCHITECTURE.md) - System architecture and design
+
 ## License
 
 All packages use MIT or Apache 2.0 licenses.
