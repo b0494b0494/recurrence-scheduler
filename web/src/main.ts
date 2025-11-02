@@ -225,23 +225,25 @@ Alpine.start();
 declare global {
   interface Window {
     schedulerApp: () => {
-    activeTab: 'calendars' | 'events' | 'create';
-    calendars: Calendar[];
-    events: Event[];
-    selectedCalendarId: string;
-    selectedCalendar: Calendar | null;
-    showCalendarDetailView: boolean;
-    calendarEvents: Event[];
-    startDate: string;
-    endDate: string;
-    eventsHtml: string;
-    calendarEventsHtml: string;
-    message: { text: string; type: 'info' | 'success' | 'error' };
+      activeTab: 'calendars' | 'events' | 'create';
+      calendars: Calendar[];
+      loading: boolean;
+      error: string | null;
+      selectedCalendarId: string;
+      selectedCalendar: Calendar | null;
+      showCalendarDetailView: boolean;
+      events: ReturnType<typeof useEvents>;
+      calendarEvents: ReturnType<typeof useEvents>;
+      startDate: string;
+      endDate: string;
+      message: { text: string; type: 'info' | 'success' | 'error' };
       newCalendar: CreateCalendarRequest;
       newEvent: CreateEventRequest & { rrule: { freq: string; interval: number; byday: string[] } };
       init(): void;
       showMessage(text: string, type?: 'success' | 'error'): void;
       loadCalendars(): Promise<void>;
+      calendarCard(calendar: Calendar): ReturnType<typeof calendarCardComponent>;
+      eventCard(event: Event): ReturnType<typeof eventCardComponent>;
       showCalendarDetail(calendar: Calendar): Promise<void>;
       closeCalendarDetail(): void;
       loadCalendarEvents(calendarId: string): Promise<void>;
