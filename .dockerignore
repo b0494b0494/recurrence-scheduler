@@ -1,0 +1,10 @@
+.git
+.gitignore
+.cursorrules
+*.md
+data/
+.env
+*.log
+.DS_Store
+.vscode
+.idea

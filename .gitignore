@@ -1,0 +1,42 @@
+# バイナリ
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+scheduler
+
+# テスト関連
+*.test
+*.out
+
+# データベース
+*.db
+*.sqlite
+*.sqlite3
+data/
+
+# 依存関係
+vendor/
+
+# 環境変数
+.env
+.env.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# ログ
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# 一時ファイル
+tmp/
+temp/
+*.tmp

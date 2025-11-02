@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Recurrence Scheduler</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📅 Recurrence Scheduler</h1>
+            <p>RFC 5545 compliant recurrence scheduler</p>
+        </header>
+
+        <nav class="tabs">
+            <button class="tab-btn active" data-tab="calendars">カレンダー</button>
+            <button class="tab-btn" data-tab="events">イベント</button>
+            <button class="tab-btn" data-tab="create">作成</button>
+        </nav>
+
+        <!-- カレンダー一覧 -->
+        <div id="calendars-tab" class="tab-content active">
+            <h2>カレンダー一覧</h2>
+            <button id="refresh-calendars" class="btn btn-primary">更新</button>
+            <div id="calendars-list" class="list"></div>
+        </div>
+
+        <!-- イベント一覧 -->
+        <div id="events-tab" class="tab-content">
+            <h2>イベント一覧</h2>
+            <div class="filter-group">
+                <select id="calendar-select" class="input">
+                    <option value="">カレンダーを選択...</option>
+                </select>
+                <input type="date" id="start-date" class="input">
+                <input type="date" id="end-date" class="input">
+                <button id="load-events" class="btn btn-primary">読み込み</button>
+            </div>
+            <div id="events-list" class="list"></div>
+        </div>
+
+        <!-- 作成フォーム -->
+        <div id="create-tab" class="tab-content">
+            <h2>新規作成</h2>
+            
+            <div class="form-section">
+                <h3>カレンダー作成</h3>
+                <form id="create-calendar-form">
+                    <input type="text" id="calendar-name" class="input" placeholder="カレンダー名" required>
+                    <textarea id="calendar-description" class="input" placeholder="説明"></textarea>
+                    <input type="text" id="calendar-timezone" class="input" placeholder="タイムゾーン (例: Asia/Tokyo)" value="UTC">
+                    <button type="submit" class="btn btn-primary">カレンダーを作成</button>
+                </form>
+            </div>
+
+            <div class="form-section">
+                <h3>イベント作成</h3>
+                <form id="create-event-form">
+                    <select id="event-calendar-id" class="input" required>
+                        <option value="">カレンダーを選択...</option>
+                    </select>
+                    <input type="text" id="event-title" class="input" placeholder="タイトル" required>
+                    <textarea id="event-description" class="input" placeholder="説明"></textarea>
+                    <input type="datetime-local" id="event-dtstart" class="input" required>
+                    <input type="datetime-local" id="event-dtend" class="input" required>
+                    
+                    <fieldset>
+                        <legend>繰り返しルール</legend>
+                        <select id="rrule-freq" class="input">
+                            <option value="">なし</option>
+                            <option value="DAILY">毎日</option>
+                            <option value="WEEKLY">毎週</option>
+                            <option value="MONTHLY">毎月</option>
+                            <option value="YEARLY">毎年</option>
+                        </select>
+                        <input type="number" id="rrule-interval" class="input" placeholder="間隔" value="1" min="1">
+                        <div id="rrule-byday-container">
+                            <label><input type="checkbox" value="MO"> 月</label>
+                            <label><input type="checkbox" value="TU"> 火</label>
+                            <label><input type="checkbox" value="WE"> 水</label>
+                            <label><input type="checkbox" value="TH"> 木</label>
+                            <label><input type="checkbox" value="FR"> 金</label>
+                            <label><input type="checkbox" value="SA"> 土</label>
+                            <label><input type="checkbox" value="SU"> 日</label>
+                        </div>
+                    </fieldset>
+                    
+                    <button type="submit" class="btn btn-primary">イベントを作成</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div id="message" class="message"></div>
+    <script src="/static/app.js"></script>
+</body>
+</html>
