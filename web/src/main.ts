@@ -10,10 +10,14 @@ window.schedulerApp = function schedulerApp() {
     calendars: [] as Calendar[],
     events: [] as Event[],
     selectedCalendarId: '',
+    selectedCalendar: null as Calendar | null,
+    showCalendarDetailView: false,
+    calendarEvents: [] as Event[],
     startDate: '',
     endDate: '',
     calendarsHtml: '<div class="text-center text-gray-500 py-12">読み込み中...</div>',
     eventsHtml: '<div class="text-center text-gray-500 py-12">カレンダーを選択して読み込みボタンをクリック</div>',
+    calendarEventsHtml: '<div class="text-center text-gray-500 py-12">読み込み中...</div>',
     message: { text: '', type: 'info' as 'info' | 'success' | 'error' },
     
     newCalendar: {
@@ -70,12 +74,26 @@ window.schedulerApp = function schedulerApp() {
         }
         
         this.calendarsHtml = this.calendars.map(cal => `
-          <div class="bg-gradient-to-br from-purple-50 to-pink-50 border-2 border-purple-200 rounded-xl p-6 hover:shadow-lg transition-all duration-300 hover:scale-105">
-            <h4 class="text-xl font-bold text-purple-700 mb-2">${this.escapeHtml(cal.name)}</h4>
+          <div 
+            @click="showCalendarDetail(cal)"
+            class="bg-gradient-to-br from-purple-50 to-pink-50 border-2 border-purple-200 rounded-xl p-6 hover:shadow-lg transition-all duration-300 hover:scale-105 cursor-pointer group"
+          >
+            <div class="flex items-start justify-between mb-2">
+              <h4 class="text-xl font-bold text-purple-700 group-hover:text-purple-800">${this.escapeHtml(cal.name)}</h4>
+              <span class="text-purple-500 opacity-0 group-hover:opacity-100 transition-opacity">👁️</span>
+            </div>
             <p class="text-gray-600 mb-3">${this.escapeHtml(cal.description || '説明なし')}</p>
             <div class="text-sm text-gray-500 space-y-1">
-              <p><span class="font-semibold">ID:</span> <code class="bg-gray-100 px-2 py-1 rounded">${cal.id}</code></p>
+              <p><span class="font-semibold">ID:</span> <code class="bg-gray-100 px-2 py-1 rounded text-xs">${cal.id.substring(0, 8)}...</code></p>
               <p><span class="font-semibold">タイムゾーン:</span> ${cal.timezone}</p>
+            </div>
+            <div class="mt-4 pt-3 border-t border-purple-200">
+              <button 
+                @click.stop="showCalendarDetail(cal)"
+                class="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white px-4 py-2 rounded-lg hover:from-purple-700 hover:to-pink-700 transition-all text-sm font-semibold"
+              >
+                📋 詳細を見る
+              </button>
             </div>
           </div>
         `).join('');
@@ -88,6 +106,63 @@ window.schedulerApp = function schedulerApp() {
           </div>
         `;
         this.showMessage('カレンダーの読み込みに失敗しました', 'error');
+      }
+    },
+
+    async showCalendarDetail(calendar: Calendar) {
+      this.selectedCalendar = calendar;
+      this.showCalendarDetailView = true;
+      await this.loadCalendarEvents(calendar.id);
+    },
+
+    closeCalendarDetail() {
+      this.showCalendarDetailView = false;
+      this.selectedCalendar = null;
+      this.calendarEvents = [];
+    },
+
+    async loadCalendarEvents(calendarId: string) {
+      this.calendarEventsHtml = '<div class="text-center text-gray-500 py-12">読み込み中...</div>';
+      
+      try {
+        const dates = setDefaultDates();
+        const start = new Date(dates.start).toISOString();
+        const end = new Date(dates.end + 'T23:59:59').toISOString();
+        
+        const data = await api.listEvents(calendarId, start, end);
+        this.calendarEvents = data.events || [];
+        
+        if (this.calendarEvents.length === 0) {
+          this.calendarEventsHtml = `
+            <div class="col-span-full text-center py-12">
+              <div class="inline-block p-6 bg-gray-50 rounded-xl">
+                <p class="text-gray-600">このカレンダーにはイベントが登録されていません</p>
+              </div>
+            </div>
+          `;
+          return;
+        }
+        
+        this.calendarEventsHtml = this.calendarEvents.map(event => `
+          <div class="bg-gradient-to-br from-blue-50 to-cyan-50 border-2 border-blue-200 rounded-xl p-6 hover:shadow-lg transition-all duration-300">
+            <h4 class="text-xl font-bold text-blue-700 mb-2">${this.escapeHtml(event.title)}</h4>
+            <p class="text-gray-600 mb-4">${this.escapeHtml(event.description || '説明なし')}</p>
+            <div class="text-sm text-gray-700 space-y-2">
+              <p><span class="font-semibold">📅 開始:</span> ${formatDateTime(event.dtstart)}</p>
+              <p><span class="font-semibold">⏰ 終了:</span> ${formatDateTime(event.dtend)}</p>
+              ${event.rrule ? `<p><span class="font-semibold">🔄 繰り返し:</span> ${formatRRule(event.rrule)}</p>` : ''}
+            </div>
+          </div>
+        `).join('');
+      } catch (error) {
+        this.calendarEventsHtml = `
+          <div class="col-span-full text-center py-12">
+            <div class="inline-block p-6 bg-red-50 border-2 border-red-200 rounded-xl">
+              <p class="text-red-600 font-semibold">エラー: ${error instanceof Error ? error.message : 'Unknown error'}</p>
+            </div>
+          </div>
+        `;
+        this.showMessage('イベントの読み込みに失敗しました', 'error');
       }
     },
 
@@ -238,20 +313,27 @@ Alpine.start();
 declare global {
   interface Window {
     schedulerApp: () => {
-      activeTab: 'calendars' | 'events' | 'create';
-      calendars: Calendar[];
-      events: Event[];
-      selectedCalendarId: string;
-      startDate: string;
-      endDate: string;
-      calendarsHtml: string;
-      eventsHtml: string;
-      message: { text: string; type: 'info' | 'success' | 'error' };
+    activeTab: 'calendars' | 'events' | 'create';
+    calendars: Calendar[];
+    events: Event[];
+    selectedCalendarId: string;
+    selectedCalendar: Calendar | null;
+    showCalendarDetailView: boolean;
+    calendarEvents: Event[];
+    startDate: string;
+    endDate: string;
+    calendarsHtml: string;
+    eventsHtml: string;
+    calendarEventsHtml: string;
+    message: { text: string; type: 'info' | 'success' | 'error' };
       newCalendar: CreateCalendarRequest;
       newEvent: CreateEventRequest & { rrule: { freq: string; interval: number; byday: string[] } };
       init(): void;
       showMessage(text: string, type?: 'success' | 'error'): void;
       loadCalendars(): Promise<void>;
+      showCalendarDetail(calendar: Calendar): Promise<void>;
+      closeCalendarDetail(): void;
+      loadCalendarEvents(calendarId: string): Promise<void>;
       loadEvents(): Promise<void>;
       createCalendar(): Promise<void>;
       createEvent(): Promise<void>;

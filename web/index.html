@@ -43,7 +43,7 @@
         </nav>
 
         <!-- Calendars Tab -->
-        <div x-show="activeTab === 'calendars'" class="bg-white rounded-b-2xl shadow-xl p-6 min-h-[500px]">
+        <div x-show="activeTab === 'calendars' && !showCalendarDetailView" class="bg-white rounded-b-2xl shadow-xl p-6 min-h-[500px]">
             <div class="flex justify-between items-center mb-6">
                 <h2 class="text-2xl font-bold text-gray-800">カレンダー一覧</h2>
                 <button 
@@ -54,6 +54,52 @@
                 </button>
             </div>
             <div x-html="calendarsHtml" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+        </div>
+
+        <!-- Calendar Detail View -->
+        <div x-show="activeTab === 'calendars' && showCalendarDetailView && selectedCalendar" class="bg-white rounded-b-2xl shadow-xl p-6 min-h-[500px]">
+            <div class="flex items-center justify-between mb-6">
+                <div class="flex items-center gap-4">
+                    <button 
+                        @click="closeCalendarDetail()"
+                        class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 py-2 rounded-lg transition-all shadow-md hover:shadow-lg"
+                    >
+                        ← 戻る
+                    </button>
+                    <div>
+                        <h2 class="text-2xl font-bold text-gray-800" x-text="selectedCalendar?.name"></h2>
+                        <p class="text-sm text-gray-500 mt-1" x-text="selectedCalendar?.description || '説明なし'"></p>
+                    </div>
+                </div>
+                <button 
+                    @click="loadCalendarEvents(selectedCalendar.id)"
+                    class="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-6 py-2 rounded-lg hover:from-purple-700 hover:to-pink-700 transition-all shadow-lg hover:shadow-xl"
+                >
+                    🔄 更新
+                </button>
+            </div>
+
+            <div class="mb-6 p-4 bg-gray-50 rounded-lg">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                    <div>
+                        <span class="font-semibold text-gray-700">📋 カレンダーID:</span>
+                        <code class="block mt-1 bg-white px-2 py-1 rounded text-xs" x-text="selectedCalendar?.id"></code>
+                    </div>
+                    <div>
+                        <span class="font-semibold text-gray-700">🌍 タイムゾーン:</span>
+                        <span class="block mt-1" x-text="selectedCalendar?.timezone"></span>
+                    </div>
+                    <div>
+                        <span class="font-semibold text-gray-700">📅 登録イベント数:</span>
+                        <span class="block mt-1 text-lg font-bold text-purple-600" x-text="calendarEvents.length + '件'"></span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mb-4">
+                <h3 class="text-xl font-bold text-gray-800 mb-4">登録されているイベント</h3>
+                <div x-html="calendarEventsHtml" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+            </div>
         </div>
 
         <!-- Events Tab -->
