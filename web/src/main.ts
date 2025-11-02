@@ -15,7 +15,6 @@ window.schedulerApp = function schedulerApp() {
     calendarEvents: [] as Event[],
     startDate: '',
     endDate: '',
-    calendarsHtml: '<div class="text-center text-gray-500 py-12">読み込み中...</div>',
     eventsHtml: '<div class="text-center text-gray-500 py-12">カレンダーを選択して読み込みボタンをクリック</div>',
     calendarEventsHtml: '<div class="text-center text-gray-500 py-12">読み込み中...</div>',
     message: { text: '', type: 'info' as 'info' | 'success' | 'error' },
@@ -55,57 +54,12 @@ window.schedulerApp = function schedulerApp() {
     },
 
     async loadCalendars() {
-      this.calendarsHtml = '<div class="text-center text-gray-500 py-12">読み込み中...</div>';
-      
       try {
         const data = await api.listCalendars();
         this.calendars = data.calendars || [];
-        
-        if (this.calendars.length === 0) {
-          this.calendarsHtml = `
-            <div class="col-span-full text-center py-12">
-              <div class="inline-block p-6 bg-gray-50 rounded-xl">
-                <p class="text-gray-600">カレンダーがありません</p>
-                <p class="text-sm text-gray-500 mt-2">「作成」タブからカレンダーを作成してください</p>
-              </div>
-            </div>
-          `;
-          return;
-        }
-        
-        this.calendarsHtml = this.calendars.map(cal => `
-          <div 
-            @click="showCalendarDetail(cal)"
-            class="bg-gradient-to-br from-purple-50 to-pink-50 border-2 border-purple-200 rounded-xl p-6 hover:shadow-lg transition-all duration-300 hover:scale-105 cursor-pointer group"
-          >
-            <div class="flex items-start justify-between mb-2">
-              <h4 class="text-xl font-bold text-purple-700 group-hover:text-purple-800">${this.escapeHtml(cal.name)}</h4>
-              <span class="text-purple-500 opacity-0 group-hover:opacity-100 transition-opacity">👁️</span>
-            </div>
-            <p class="text-gray-600 mb-3">${this.escapeHtml(cal.description || '説明なし')}</p>
-            <div class="text-sm text-gray-500 space-y-1">
-              <p><span class="font-semibold">ID:</span> <code class="bg-gray-100 px-2 py-1 rounded text-xs">${cal.id.substring(0, 8)}...</code></p>
-              <p><span class="font-semibold">タイムゾーン:</span> ${cal.timezone}</p>
-            </div>
-            <div class="mt-4 pt-3 border-t border-purple-200">
-              <button 
-                @click.stop="showCalendarDetail(cal)"
-                class="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white px-4 py-2 rounded-lg hover:from-purple-700 hover:to-pink-700 transition-all text-sm font-semibold"
-              >
-                📋 詳細を見る
-              </button>
-            </div>
-          </div>
-        `).join('');
       } catch (error) {
-        this.calendarsHtml = `
-          <div class="col-span-full text-center py-12">
-            <div class="inline-block p-6 bg-red-50 border-2 border-red-200 rounded-xl">
-              <p class="text-red-600 font-semibold">エラー: ${error instanceof Error ? error.message : 'Unknown error'}</p>
-            </div>
-          </div>
-        `;
         this.showMessage('カレンダーの読み込みに失敗しました', 'error');
+        this.calendars = [];
       }
     },
 
@@ -322,7 +276,6 @@ declare global {
     calendarEvents: Event[];
     startDate: string;
     endDate: string;
-    calendarsHtml: string;
     eventsHtml: string;
     calendarEventsHtml: string;
     message: { text: string; type: 'info' | 'success' | 'error' };
