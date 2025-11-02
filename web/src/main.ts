@@ -116,7 +116,29 @@ window.schedulerApp = function schedulerApp() {
       
       try {
         const data = await api.listEvents(this.calendarViewCalendarId, start, end);
-        this.calendarViewEvents = data.events || [];
+        const baseEvents = data.events || [];
+        
+        // 繰り返しイベントを展開
+        const expandedEvents: Event[] = [];
+        
+        for (const event of baseEvents) {
+          if (event.rrule) {
+            // 繰り返しイベントの場合、展開する
+            try {
+              const expandedData = await api.expandRecurrence(event.id, start, end);
+              expandedEvents.push(...(expandedData.instances || []));
+            } catch (err) {
+              // 展開に失敗した場合は元のイベントを追加
+              console.warn('Failed to expand recurrence:', err);
+              expandedEvents.push(event);
+            }
+          } else {
+            // 繰り返しなしのイベントはそのまま追加
+            expandedEvents.push(event);
+          }
+        }
+        
+        this.calendarViewEvents = expandedEvents;
       } catch (error) {
         this.calendarViewEvents = [];
         this.showMessage('カレンダービューの読み込みに失敗しました', 'error');

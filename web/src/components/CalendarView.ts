@@ -36,11 +36,14 @@ export function calendarViewComponent(events: Event[], year: number, month: numb
     const isToday = date.toDateString() === today.toDateString();
     
     // この日のイベントをフィルタ
+    // 繰り返し展開済みのイベントなので、dtstartの日付で一致するものを探す
     const dayEvents = events.filter(event => {
       const eventStart = new Date(event.dtstart);
-      return eventStart.getFullYear() === year &&
-             eventStart.getMonth() === month &&
-             eventStart.getDate() === day;
+      const eventYear = eventStart.getFullYear();
+      const eventMonth = eventStart.getMonth();
+      const eventDate = eventStart.getDate();
+      
+      return eventYear === year && eventMonth === month && eventDate === day;
     });
     
     days.push({
